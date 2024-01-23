@@ -1,4 +1,8 @@
-﻿CREATE PROCEDURE dbo.GetMonthlyListenData
+﻿CREATE PROCEDURE [dbo].[GetMonthlyListenData]
+    @monthStart int = 1,
+    @monthEnd int = 12,
+    @yearStart int = 2000,
+    @yearEnd int = 2050
 AS
 BEGIN
     select year(d.EndTime) as [Year],
@@ -12,6 +16,7 @@ BEGIN
             count(distinct s.ArtistID) as [Artists_Listened]
     from dbo.[Data] as d
     join dbo.[Song] as s on s.ID = d.SongID
+    where (year(d.EndTime) between @yearStart and @yearEnd) and (month(d.EndTime) between @monthStart and @monthEnd)
     group by year(d.EndTime), month(d.EndTime)
     order by year(d.EndTime), month(d.EndTime)
 END

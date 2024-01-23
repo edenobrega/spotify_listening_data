@@ -1,6 +1,4 @@
-﻿
-
-CREATE   PROCEDURE dbo.GetTopListenedSongs
+﻿CREATE PROCEDURE dbo.GetTopListenedSongs
     @FilterAmount int = -1
 AS
 BEGIN
