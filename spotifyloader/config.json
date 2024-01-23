@@ -1,5 +1,6 @@
 {
     "connectionString": "test",
     "client_id": "test",
-    "client_secret": "test"
+    "client_secret": "test",
+    "folder_location": "X:\\FILE"
 }

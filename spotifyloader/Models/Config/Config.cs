@@ -15,5 +15,7 @@ namespace spotifyloader.Models.Config
         public string ClientID { get; set; }
         [JsonProperty("client_secret")]
 		public string ClientSecret { get; set; }
+        [JsonProperty("folder_location")]
+		public string FolderLocation { get; set; }
 	}
 }

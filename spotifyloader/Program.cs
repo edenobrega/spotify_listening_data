@@ -71,7 +71,7 @@ namespace spotifyloader
             conn.Close();
 			conn.Open();
 
-            var files = Directory.GetFiles("D:\\spotify data\\2023\\Spotify Extended Streaming History").Where(w => w.Contains(".json")).ToArray();
+            var files = Directory.GetFiles(config.FolderLocation).Where(w => w.Contains(".json")).ToArray();
 			foreach (var file in files)
 			{
                 IEnumerable<SongData> streamingData = JsonConvert.DeserializeObject<IEnumerable<SongData>>(File.ReadAllText(file));
