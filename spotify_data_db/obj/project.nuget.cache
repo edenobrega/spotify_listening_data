@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "kmi+16YkbldXOYQcj7Fyr2QZmVOqlTX82MZVKJj/HFsjPe/ReWKrp1OwEPwucEp4xGsEBNype8pR0Ldj1vXEJA==",
+  "success": true,
+  "projectFilePath": "c:\\Users\\edeno\\source\\repos\\spotify_data_db\\spotify_data_db.sqlproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\edeno\\.nuget\\packages\\microsoft.netframework.referenceassemblies\\1.0.0\\microsoft.netframework.referenceassemblies.1.0.0.nupkg.sha512",
+    "C:\\Users\\edeno\\.nuget\\packages\\microsoft.netframework.referenceassemblies.net472\\1.0.0\\microsoft.netframework.referenceassemblies.net472.1.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}
