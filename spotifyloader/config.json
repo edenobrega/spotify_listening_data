@@ -1,6 +1,7 @@
 {
-    "connectionString": "test",
-    "client_id": "test",
-    "client_secret": "test",
-    "folder_location": "X:\\FILE"
+  "connectionString": "Server=localhost;Database=spotify_test;User ID=root;Pwd=password;AllowLoadLocalInfile=true",
+  "client_id": "d03dfa3122fe45f099def309ea677047",
+  "client_secret": "7aaccca9bd064584b6ce8e9074f141fd",
+  "file_directory": "D:\\spotify data\\2023\\Spotify Extended Streaming History",
+  "bulk_insert_size": 50000
 }

@@ -1,14 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace spotifyloader.Models
+﻿namespace SpotifyLoader.Models
 {
-    internal class Platform
+    internal struct Platform
     {
         public int ID { get; set; }
         public string Name { get; set; }
+
+        public static bool operator ==(Platform Left, Platform Right)
+        {
+            return Left.Name == Right.Name;
+        }
+
+        public static bool operator !=(Platform Left, Platform Right)
+        {
+            return Left.Name != Right.Name;
+        }
     }
 }

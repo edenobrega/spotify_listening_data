@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace spotifyloader.Models.Config
+namespace SpotifyLoader.Models.Config
 {
 	internal class Config
 	{
@@ -15,7 +15,9 @@ namespace spotifyloader.Models.Config
         public string ClientID { get; set; }
         [JsonProperty("client_secret")]
 		public string ClientSecret { get; set; }
-        [JsonProperty("folder_location")]
-		public string FolderLocation { get; set; }
+		[JsonProperty("file_directory")] 
+		public string Directory { get; set; }
+		[JsonProperty("bulk_insert_size")] 
+		public int BulkSize { get; set; }
 	}
 }

@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace spotifyloader.Models
+namespace SpotifyLoader.Models
 {
-    internal class Data
+    internal record struct Data
     {
         public int ID { get; set; }
         public DateTime EndTime { get; set; }

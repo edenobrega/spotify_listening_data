@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace spotifyloader.Models.API
+namespace SpotifyLoader.Models.API
 {
     public class SongData
     {
