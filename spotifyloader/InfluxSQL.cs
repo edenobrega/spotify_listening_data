@@ -66,8 +66,14 @@ namespace SpotifyLoader
             foreach (var item in typeof(T).GetProperties().Where(prop => prop.GetCustomAttribute<ExcludeFromBulk>() is null))
             {
                 DataColumn column = new DataColumn();
-                column.DataType = item.PropertyType;
+                Type? nType = Nullable.GetUnderlyingType(item.PropertyType);
+                column.DataType = nType ?? item.PropertyType;
                 column.ColumnName = item.GetCustomAttribute<ColumnName>()?.Name ?? item.Name;
+
+                if (nType is not null)
+                {
+                    column.AllowDBNull = true;
+                }
 
                 bool isAutoIncrement = item.GetCustomAttribute<AutoIncrementColumn>() is not null;
 
@@ -104,7 +110,7 @@ namespace SpotifyLoader
 
                 foreach (KeyValuePair<string, PropertyInfo> column in columnLookup)
                 {
-                    dr[column.Key] = column.Value.GetValue(item);
+                    dr[column.Key] = column.Value.GetValue(item) ?? DBNull.Value;
                 }
 
                 dt.Rows.Add(dr);

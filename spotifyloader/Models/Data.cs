@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SpotifyLoader.Models
 {
-    [BulkTableName("Artist")]
+    [BulkTableName("Data")]
     internal record struct Data
     {
         [AutoIncrementColumn]
