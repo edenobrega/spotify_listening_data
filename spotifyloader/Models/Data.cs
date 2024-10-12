@@ -6,8 +6,10 @@ using System.Threading.Tasks;
 
 namespace SpotifyLoader.Models
 {
+    [BulkTableName("Artist")]
     internal record struct Data
     {
+        [AutoIncrementColumn]
         public int ID { get; set; }
         public DateTime EndTime { get; set; }
         public float ms_played { get; set; }

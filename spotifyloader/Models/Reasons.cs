@@ -8,6 +8,7 @@ namespace SpotifyLoader.Models
 {
     internal struct Reason
     {
+        [AutoIncrementColumn]
         public int ID { get; set; }
         public string Name { get; set; }
         public static bool operator ==(Reason Left, Reason Right)

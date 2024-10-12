@@ -9,7 +9,8 @@ using Serilog;
 using SpotifyLoader.Models;
 using SpotifyLoader.Models.API;
 using Microsoft.Extensions.Logging;
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+using SpotifyLoader.Models.Config;
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting conclassor. Consider declaring as nullable.
 
 namespace SpotifyLoader
 {
@@ -60,63 +61,153 @@ namespace SpotifyLoader
             return _dataTable;
         }
 
-        private static void LoadStreamingDataNew(Microsoft.Extensions.Logging.ILogger logger, Config config)
+        private static void LoadStreamingData(Microsoft.Extensions.Logging.ILogger logger, Config config)
         {
+            InfluxSQL influx = new InfluxSQL(config.ConnectionString);
             SqlConnection conn = new SqlConnection(config.ConnectionString);
 
-            List<Artist> artists = new();
-            List<Album> albums = new();
-            List<Reason> reasons = new();
-            List<Song> songs = new();
-            List<Platform> platforms = new();
-            List<User> users = new();
+            int inserted = -1;
+
+            Dictionary<string, Artist> currentArtists = new();
+            ILookup<string, Album> currentAlbums;
+            Dictionary<string, Reason> currentReasons = new();
+            Dictionary<string, Song> currentSongs = new();
+            Dictionary<string, Platform> currentPlatforms = new();
+            Dictionary<string, User> currentUsers = new();
 
             logger.LogInformation("Getting current data...");
 
-            string sql = string.Empty;
             conn.Open();
-            sql = "SELECT * FROM [dbo].[Album]";
-            albums = conn.Query<Album>(sql).ToList();
-            sql = "SELECT * FROM [dbo].[Artist]";
-            artists = conn.Query<Artist>(sql).ToList();
-            sql = "SELECT * FROM [dbo].[Reason]";
-            reasons = conn.Query<Reason>(sql).ToList();
-            sql = "SELECT * FROM [dbo].[Song]";
-            songs = conn.Query<Song>(sql).ToList();
-            sql = "SELECT * FROM [dbo].[Platform]";
-            platforms = conn.Query<Platform>(sql).ToList();
-            sql = "SELECT * FROM [dbo].[User]";
-            users = conn.Query<User>(sql).ToList();
+            currentAlbums = conn.Query<Album>(StoredProcedures.GetAlbums, commandType: CommandType.StoredProcedure).ToLookup(k => k.Name, v => v);
+            currentArtists = conn.Query<Artist>("SELECT * FROM [dbo].[Artist]").ToDictionary(k => k.Name, v => v);
+            currentReasons = conn.Query<Reason>("SELECT * FROM [dbo].[Reason]").ToDictionary(k => k.Name, v => v);
+            currentSongs = conn.Query<Song>("SELECT * FROM [dbo].[Song]").ToDictionary(k => k.Name, v => v);
+            currentPlatforms = conn.Query<Platform>("SELECT * FROM [dbo].[Platform]").ToDictionary(k => k.Name, v => v);
+            currentUsers = conn.Query<User>("SELECT * FROM [dbo].[User]").ToDictionary(k => k.Name, v => v);
             conn.Close();
 
             logger.LogInformation("Finished getting current data");
 
             List<SongData> data_bulk;
 
-            logger.LogInformation("Getting files from directory {}", config.Directory);
+            logger.LogInformation("Getting files from directory {0}", config.Directory);
             string[] files = Directory.GetFiles(config.Directory).Where(w => w.Contains(".json") && w.Contains("Audio")).ToArray();
-            logger.LogInformation("{} files found", config.Directory.Length);
+            logger.LogInformation("{0} files found", files.Length);
             foreach (string file in files)
             {
-                logger.LogInformation("Loading file {}", file);
+                logger.LogInformation("Loading file {0}", file);
 
                 string fileData = File.ReadAllText(file);
 
                 if (fileData is null)
                 {
-                    logger.LogWarning("No data found in file {}", file);
+                    logger.LogWarning("No data found in file {0}", file);
                     continue;
                 }
 
-                data_bulk = JsonConvert.DeserializeObject<List<SongData>>(fileData) ?? new List<SongData>();
+                data_bulk = JsonConvert.DeserializeObject<List<SongData>>(fileData) ?? [];
 
                 if (data_bulk.Count == 0)
                 {
-                    logger.LogWarning("Converting file {} to object list failed", file);
+                    logger.LogWarning("Converting file {0} to object list failed", file);
                     continue;
                 }
 
+                #region Artists
+                logger.LogInformation("Searching for new artists");
+                List<Artist> newArtists = new();
 
+                foreach (var left in data_bulk.Select(s => new Artist { Name = s.master_metadata_album_artist_name }).Distinct().ToList())
+                {
+                    if (!currentArtists.TryGetValue(left.Name, out _))
+                    {
+                        newArtists.Add(left);
+                    }
+                }
+                logger.LogInformation("{0} new artists found", newArtists.Count);
+
+                if (newArtists.Count != 0)
+                {
+                    inserted = influx.BulkInsert(newArtists);
+                    logger.LogInformation("{0} artists inserted", inserted);
+                    conn.Open();
+                    currentArtists = conn.Query<Artist>("SELECT * FROM [dbo].[Artist]").ToDictionary(k => k.Name, v => v);
+                    conn.Close();
+                }
+                #endregion
+
+                #region Album
+                logger.LogInformation("Searching for new albums");
+                List<Album> newAlbums = new();
+
+                foreach (var left in data_bulk.Select(s => new Album { Name = s.master_metadata_album_album_name, ArtistID = currentArtists[s.master_metadata_album_artist_name].ID, ArtistName =  s.master_metadata_album_artist_name }).Distinct().ToList())
+                {
+                    var x = currentAlbums[left.Name];
+                    if (!x.Any())
+                    {
+                        Album _album;
+                        switch (x.Count())
+                        {
+                            case 0:
+                                break;
+                            case 1:
+                                _album = x.First();
+                                break;
+                            default:
+                                _album = x.Single(s => s.ArtistName == left.ArtistName);
+                                break;
+                        }
+
+                        newAlbums.Add(left);
+                    }
+                }
+                logger.LogInformation("{0} new albums found", newArtists.Count);
+
+                if (newAlbums.Count != 0)
+                {
+                    inserted = influx.BulkInsert(newAlbums);
+                    logger.LogInformation("{0} albums inserted", inserted);
+                    conn.Open();
+                    currentAlbums = conn.Query<Album>(StoredProcedures.GetAlbums, commandType: CommandType.StoredProcedure).ToLookup(k => k.Name, v => v);
+                    conn.Close();
+                }
+                #endregion
+
+                #region Reasons
+                logger.LogInformation("Searching for new reasons");
+                List<Reason> newReasons = new();
+
+                List<Reason> existingReasons = data_bulk.Select(s => new Reason { Name = s.reason_start }).ToList();
+
+                existingReasons.AddRange(data_bulk.Select(s => new Reason { Name = s.reason_end }).ToList());
+
+                existingReasons = existingReasons.Distinct().ToList();
+
+                foreach (var left in existingReasons)
+                {
+                    if (!currentReasons.TryGetValue(left.Name, out _))
+                    {
+                        newReasons.Add(left);
+                    }
+                }
+
+                if (newReasons.Count != 0)
+                {
+                    inserted = influx.BulkInsert(newReasons);
+                    logger.LogInformation("{0} reasons inserted", inserted);
+                    conn.Open();
+                    currentReasons = conn.Query<Reason>("SELECT * FROM [dbo].[Reason]").ToDictionary(k => k.Name, v => v);
+                    conn.Close();
+                }
+                else
+                {
+                    logger.LogInformation("No new reasons found");
+                }
+                #endregion
+
+                #region Song
+                logger.LogInformation("Searching for new songs");
+                #endregion
 
                 break;
             }
@@ -231,7 +322,8 @@ namespace SpotifyLoader
                 {
                     throw new Exception("Config loaded as null");
                 }
-                LoadStreamingDataNew(logger, _config);
+
+                LoadStreamingData(logger, _config);
             }
             catch (Exception ex)
             {
