@@ -1,5 +1,0 @@
-﻿CREATE TABLE [dbo].[Platform]
-(
-	[ID] INT NOT NULL PRIMARY KEY IDENTITY, 
-    [Name] NVARCHAR(250) NULL
-)
