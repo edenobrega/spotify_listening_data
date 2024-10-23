@@ -7,6 +7,7 @@
         public string Name { get; set; }
         [ExcludeFromBulk]
         public string ArtistName { get; set; }
+        [ExcludeFromBulk]
         public int ArtistID { get; set; }
         [ExcludeFromBulk]
         public string AlbumName { get; set; }

@@ -101,7 +101,7 @@ namespace SpotifyLoader
 
             CreateDataTable<T>(out string tableName, out DataTable dt, out Dictionary<string, PropertyInfo> columnLookup);
 
-            var nameProp = data.First()?.GetType().GetProperty("Name");
+            PropertyInfo? nameProp = data.First()?.GetType().GetProperty("Name");
 
             DataRow dr;
             foreach (var item in data)

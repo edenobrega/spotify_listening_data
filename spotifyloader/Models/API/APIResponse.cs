@@ -1,7 +1,8 @@
 ﻿namespace SpotifyLoader.Models.API
 {
-    internal class FeaturesResponse
+    internal class APIResponse
     {
         public List<FeatureResponse> audio_features { get; set; }
+        public List<TrackResponse> tracks { get; set; }
     }
 }
