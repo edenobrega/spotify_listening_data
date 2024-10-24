@@ -76,7 +76,6 @@ namespace SpotifyLoader
             logger.LogInformation("Getting current data...");
 
             conn.Open();
-            currentAlbums = new ConcurrentDictionary<string, Album>(conn.Query<Album>("SELECT * FROM [dbo].[Album]").ToDictionary(k => k.URI, v => v));
             currentReasons = new ConcurrentDictionary<string, Reason>(conn.Query<Reason>("SELECT * FROM [dbo].[Reason]").ToDictionary(k => k.Name, v => v));
             currentSongs = new ConcurrentDictionary<string, Song>(conn.Query<Song>("SELECT * FROM [dbo].[Song]").ToDictionary(k => k.Track_Uri, v => v));
             currentPlatforms = new ConcurrentDictionary<string, Platform>(conn.Query<Platform>("SELECT * FROM [dbo].[Platform]").ToDictionary(k => k.Name, v => v));
@@ -89,150 +88,98 @@ namespace SpotifyLoader
             string[] files = Directory.GetFiles(config.Directory).Where(w => w.Contains(".json") && w.Contains("Audio")).ToArray();
             logger.LogInformation("{0} files found", files.Length);
 
+            var newReasons = new ConcurrentBag<Reason>();
+            var newSongs = new ConcurrentBag<Song>();
+            var newPlatforms = new ConcurrentBag<Platform>();
+            var newUsers = new ConcurrentBag<User>();
+
+            var ListeningData = new ConcurrentBag<SongData>();
+
             Parallel.ForEach(files, file =>
             {
                 logger.LogInformation("{0} loading file", file);
                 string fileData = File.ReadAllText(file);
                 logger.LogInformation("{0} loaded", file);
 
+                logger.LogInformation("{0} Searching for new data", file);
                 foreach (var item in JsonConvert.DeserializeObject<List<SongData>>(fileData) ?? [])
                 {
                     if (item.spotify_episode_uri is null && item.master_metadata_track_name is not null)
                     {
-                        allData.Add(item);
+                        if (!currentReasons.TryGetValue(item.reason_start, out _))
+                        {
+                            Reason reasonStart = new Reason { Name = item.reason_start };
+                            newReasons.Add(reasonStart);
+                            currentReasons.TryAdd(item.reason_start, reasonStart);
+                        }
+
+                        if (!currentReasons.TryGetValue(item.reason_end, out _))
+                        {
+                            Reason reasonEnd = new Reason { Name = item.reason_end };
+                            newReasons.Add(reasonEnd);
+                            currentReasons.TryAdd(item.reason_end, reasonEnd);
+                        }
+
+                        if (!currentSongs.TryGetValue(item.spotify_track_uri, out _))
+                        {
+                            Song song = new Song
+                            {
+                                Name = item.master_metadata_track_name,
+                                Track_Uri = item.spotify_track_uri
+                            };
+
+                            newSongs.Add(song);
+                            currentSongs.TryAdd(item.spotify_track_uri, song);
+                        }
+
+                        if (!currentPlatforms.TryGetValue(item.platform, out _))
+                        {
+                            Platform platform = new Platform
+                            {
+                                Name = item.platform
+                            };
+                            newPlatforms.Add(platform);
+                            currentPlatforms.TryAdd(item.platform, platform);
+                        }
+
+                        if (!currentUsers.TryGetValue(item.username, out _))
+                        {
+                            User user = new User { Name = item.username };
+                            newUsers.Add(user);
+                            currentUsers.TryAdd(item.username, user);
+                        }
+
+                        ListeningData.Add(item);
                     }
                 }
+                logger.LogInformation("{0} finished searching file for new data", file);
             });
 
+            logger.LogInformation("Searching for data finished");
 
-            var data_bulk = new List<SongData>();
+            influx.BulkInsert(newReasons);
+            influx.BulkInsert(newSongs);
+            influx.BulkInsert(newPlatforms);
+            influx.BulkInsert(newUsers);
 
-            #region Reasons
-            logger.LogInformation("Searching for new reasons");
-            List<Reason> newReasons = new();
+            newReasons.Clear();
+            newSongs.Clear();
+            newPlatforms.Clear();
+            newUsers.Clear();
 
-            List<Reason> existingReasons = data_bulk.Select(s => new Reason { Name = s.reason_start }).ToList();
+            logger.LogInformation("Refreshing data . . .");
 
-            existingReasons.AddRange(data_bulk.Select(s => new Reason { Name = s.reason_end }).ToList());
+            conn.Open();
+            currentReasons = new ConcurrentDictionary<string, Reason>(conn.Query<Reason>("SELECT * FROM [dbo].[Reason]").ToDictionary(k => k.Name, v => v));
+            currentSongs = new ConcurrentDictionary<string, Song>(conn.Query<Song>("SELECT * FROM [dbo].[Song]").ToDictionary(k => k.Track_Uri, v => v));
+            currentPlatforms = new ConcurrentDictionary<string, Platform>(conn.Query<Platform>("SELECT * FROM [dbo].[Platform]").ToDictionary(k => k.Name, v => v));
+            currentUsers = new ConcurrentDictionary<string, User>(conn.Query<User>("SELECT * FROM [dbo].[User]").ToDictionary(k => k.Name, v => v));
+            conn.Close();
 
-            existingReasons = existingReasons.Distinct().ToList();
-
-            foreach (var left in existingReasons)
-            {
-                if (!currentReasons.TryGetValue(left.Name, out _))
-                {
-                    newReasons.Add(left);
-                }
-            }
-
-            if (newReasons.Count > 0)
-            {
-                logger.LogInformation("{0} new reasons found", newReasons.Count);
-                inserted = influx.BulkInsert(newReasons);
-                logger.LogInformation("{0} reasons inserted", inserted);
-                conn.Open();
-                currentReasons = conn.Query<Reason>("SELECT * FROM [dbo].[Reason]").ToDictionary(k => k.Name, v => v);
-                conn.Close();
-            }
-            else
-            {
-                logger.LogInformation("No new reasons found");
-            }
-            #endregion
-
-            #region Song
-            logger.LogInformation("Searching for new songs");
-            List<Song> newSongs = new();
-
-            var xxxxx = data_bulk.Select(s => new Song { Name = s.master_metadata_track_name, Track_Uri = s.spotify_track_uri, AlbumName = s.master_metadata_album_album_name }).Distinct();
-
-            foreach (var left in xxxxx)
-            {
-                if (!currentSongs.TryGetValue(left.Track_Uri, out _))
-                {
-                    Song newSong = new Song
-                    {
-                        Name = left.Name,
-                        Track_Uri = left.Track_Uri
-                    };
-                    newSongs.Add(newSong);
-                }
-            }
-
-            if (newSongs.Count() > 0)
-            {
-                logger.LogInformation("{0} new songs found", inserted);
-                inserted = influx.BulkInsert(newSongs);
-                logger.LogInformation("{0} songs inserted", inserted);
-                conn.Open();
-                currentSongs = conn.Query<Song>("SELECT * FROM [dbo].[Song]").ToDictionary(k => k.Track_Uri, v => v);
-                conn.Close();
-            }
-            else
-            {
-                logger.LogInformation("No new songs found");
-            }
-            #endregion
-
-            #region Platform
-            logger.LogInformation("Searching for new platforms");
-            List<Platform> newPlatforms = new();
-
-            foreach (var left in data_bulk.Select(s => new Platform { Name = s.platform }).Distinct())
-            {
-                if (!currentPlatforms.TryGetValue(left.Name, out _))
-                {
-                    newPlatforms.Add(left);
-                }
-            }
-
-            if (newPlatforms.Count > 0)
-            {
-                logger.LogInformation("{0} new platforms found", newPlatforms.Count);
-                inserted = influx.BulkInsert(newPlatforms);
-                logger.LogInformation("{0} platforms inserted", inserted);
-                conn.Open();
-                currentPlatforms = conn.Query<Platform>("SELECT * FROM [dbo].[Platform]").ToDictionary(k => k.Name, v => v);
-                conn.Close();
-            }
-            else
-            {
-                logger.LogInformation("No new platforms found");
-            }
-            #endregion
-
-            #region User
-            logger.LogInformation("Searching for new user");
-            List<User> newUsers = new();
-
-            foreach (var left in data_bulk.Select(s => new User { Name = s.username }).Distinct())
-            {
-                if (!currentUsers.TryGetValue(left.Name, out _))
-                {
-                    newUsers.Add(left);
-                }
-            }
-
-            if (newUsers.Count > 0)
-            {
-                logger.LogInformation("{0} new users inserted", newUsers.Count);
-                inserted = influx.BulkInsert(newUsers);
-                logger.LogInformation("{0} users inserted", inserted);
-                conn.Open();
-                currentUsers = conn.Query<User>("SELECT * FROM [dbo].[User]").ToDictionary(k => k.Name, v => v);
-                conn.Close();
-            }
-            else
-            {
-                logger.LogInformation("No new users found");
-            }
-            #endregion
-
-            #region Listening Data
             logger.LogInformation("Inserting listening data");
             List<Data> toAdd = new();
 
-            foreach (var item in data_bulk)
+            foreach (var item in ListeningData)
             {
                 DateTime? date = null;
                 if (item.offline_timestamp is not null)
@@ -275,8 +222,6 @@ namespace SpotifyLoader
                 logger.LogInformation("{0} rows successfuly inserted", inserted);
                 toAdd.Clear();
             }
-            #endregion
-
         }
 
         private static void LoadAudioFeatureData(Config config)
