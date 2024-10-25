@@ -1,4 +1,5 @@
-﻿CREATE PROCEDURE dbo.GetMostListenedPerYear
+﻿-- Create the stored procedure in the specified schema
+CREATE PROCEDURE dbo.GetMostListenedPerYear
 AS
 BEGIN
 select t.[Year], s.[Name], t.SumListened

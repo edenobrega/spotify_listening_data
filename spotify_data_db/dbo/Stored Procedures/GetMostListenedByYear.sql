@@ -1,8 +1,8 @@
-﻿
+﻿-- Create the stored procedure in the specified schema
 CREATE   PROCEDURE [dbo].[GetMostListenedByYear]
-    @Count int  = 100,
-    @Year int 
-
+    @Count /*parameter name*/ int /*datatype_for_param1*/ = 100, /*default_value_for_param1*/
+    @Year /*parameter name*/ int /*datatype_for_param1*/
+-- add more stored procedure parameters here
 AS
 BEGIN
     select top(@Count) year(d.EndTime), s.[Name], sum(cast(d.ms_played as bigint)) as [SumListened], min(d.EndTime)
