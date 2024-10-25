@@ -111,6 +111,4 @@ UpgradeLog*.XML
 spotify_data_db/bin/debug
 spotify_data_db/obj/Debug/
 
-spotify_data_db/
-
 spotifyloader/config.json
