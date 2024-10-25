@@ -112,3 +112,9 @@ spotify_data_db/bin/debug
 spotify_data_db/obj/Debug/
 
 spotifyloader/config.json
+
+spotify_data_db/spotify_data_db.jfm
+
+spotify_data_db/spotify_data_db.refactorlog
+
+spotify_data_db/spotify_data_db.sqlproj_backup
