@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using SpotifyLoader.Models.Config;
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting conclassor. Consider declaring as nullable.
 
 namespace SpotifyLoader
@@ -320,34 +321,17 @@ namespace SpotifyLoader
             }
         }
 
-        // Albums without linked artists (yet)
-        //SELECT a.ID, a.Name, a.URI
-        //FROM dbo.album as a
-        //LEFT JOIN dbo.AlbumToArtist AS ata ON ata.AlbumID = a.ID
-        //GROUP BY a.ID, a.Name, a.URI
-        //HAVING COUNT(ata.AlbumID) = 0
-
-        private static void LoadSongData(Microsoft.Extensions.Logging.ILogger logger, Config config)
+        private static void DownloadSongAlbumData(Microsoft.Extensions.Logging.ILogger logger, Config config)
         {
-            logger.LogInformation("LoadSongData Start");
+            logger.LogInformation("DownloadSongAlbumData Start");
 
-            InfluxSQL influx = new InfluxSQL(config.ConnectionString);
-            int inserted = -1;
+            string filePath = config.SongAlbumDirectory + "\\" + config.SongAlbumFileName;
 
             List<Song> songs;
-            Dictionary<string, Album> currentAlbums;
-            Dictionary<string, Artist> currentArtists;
-
-            SqlConnection conn = new SqlConnection(config.ConnectionString);
-
-            logger.LogInformation("Getting existing, song, album, artists");
-
-            conn.Open();
+            using var conn = new SqlConnection(config.ConnectionString);
             songs = conn.Query<Song>("SELECT * FROM dbo.Song WHERE AlbumID IS NULL").ToList();
-            currentAlbums = conn.Query<Album>("SELECT * FROM dbo.Album").ToDictionary(k => k.URI, v => v);
-            currentArtists = conn.Query<Artist>("SELECT * FROM dbo.Artist").ToDictionary(k => k.URI, v => v);
             conn.Close();
-            
+
             logger.LogInformation("{0} songs without an album", songs.Count);
 
             logger.LogInformation("Getting song data from API");
@@ -364,7 +348,7 @@ namespace SpotifyLoader
                     logger.LogInformation("Batch count reached, requesting from API");
                     batchCount = 0;
                     ids = ids.TrimEnd(',');
-                    APIResponse apiData = GetApiData<APIResponse>("https://api.spotify.com/v1/tracks?ids="+ids, GetApiKey(config));
+                    APIResponse apiData = GetApiData<APIResponse>("https://api.spotify.com/v1/tracks?ids=" + ids, GetApiKey(config));
                     DateTime lastRequest = DateTime.Now;
 
                     responses.AddRange(apiData.tracks);
@@ -385,6 +369,45 @@ namespace SpotifyLoader
             }
 
             logger.LogInformation("Finished getting data from API");
+            logger.LogInformation("Saving to file {0} in location {1}", config.SongAlbumDirectory,  config.SongAlbumFileName);
+
+            if (File.Exists(filePath))
+            {
+                File.Move(filePath, config.SongAlbumDirectory + "\\" +"old_file.json");
+            }
+
+            File.WriteAllText(filePath, JsonConvert.SerializeObject(responses));
+
+            if (File.Exists(config.SongAlbumDirectory + "\\" + "old_file.json"))
+            {
+                File.Delete(config.SongAlbumDirectory + "\\" + "old_file.json");
+            }
+        }
+
+        private static void LoadSongData(Microsoft.Extensions.Logging.ILogger logger, Config config)
+        {
+            logger.LogInformation("LoadSongData Start");
+
+            InfluxSQL influx = new InfluxSQL(config.ConnectionString);
+            int inserted = -1;
+
+
+            Dictionary<string, Album> currentAlbums;
+            Dictionary<string, Artist> currentArtists;
+
+            SqlConnection conn = new SqlConnection(config.ConnectionString);
+
+            logger.LogInformation("Getting existing, song, album, artists");
+
+            conn.Open();
+            currentAlbums = conn.Query<Album>("SELECT * FROM dbo.Album").ToDictionary(k => k.URI, v => v);
+            currentArtists = conn.Query<Artist>("SELECT * FROM dbo.Artist").ToDictionary(k => k.URI, v => v);
+            conn.Close();
+
+
+            string fileData = File.ReadAllText(config.SongAlbumDirectory+"\\"+config.SongAlbumFileName);
+
+            var responses = JsonConvert.DeserializeObject<List<TrackResponse>>(fileData) ?? [];
 
             // insert new albums
             logger.LogInformation("Finding new albums");
@@ -441,17 +464,22 @@ namespace SpotifyLoader
 
             string json_album_to_artist = "";
             string json_song_to_album = "";
+            string json_song_to_artist = "";
 
             int batchCountSong = 0;
             int batchCountArtist = 0;
+            int batchCountSongToArtist = 0;
+
+            // TODO: so much repeated code, this can 100% be improved, and should be
 
             // album to artist update
             foreach (var item in responses)
             {
                 json_song_to_album += JsonConvert.SerializeObject(new
                 {
-                    song_uri = "spotify:track:"+item.id,
-                    album_uri = item.album.uri
+                    song_uri = item.uri,
+                    album_uri = item.album.uri,
+                    item.duration_ms
                 }) + ",";
                 batchCountSong++;
                 if (batchCountSong == 100)
@@ -466,10 +494,13 @@ namespace SpotifyLoader
                     batchCountSong = 0;
                     logger.LogInformation("Song table updated");
                 }
-                foreach (var cross in item.artists)
+
+                for (int i = 0; i < item.album.artists.Length; i++)
                 {
-                    json_album_to_artist += JsonConvert.SerializeObject(new 
-                    { 
+                    var cross = item.album.artists[i];
+                    json_album_to_artist += JsonConvert.SerializeObject(new
+                    {
+                        primary = i == 0 ? 1 : 0,
                         album_uri = item.album.uri,
                         artist_uri = cross.uri
                     }) + ",";
@@ -487,6 +518,34 @@ namespace SpotifyLoader
                         json_album_to_artist = string.Empty;
                         batchCountArtist = 0;
                         logger.LogInformation("AlbumToArtist table updated");
+                    }
+                }
+
+                for (int i = 0; i < item.artists.Length; i++)
+                {
+                    var cross_b = item.artists[i];
+
+                    json_song_to_artist += JsonConvert.SerializeObject(new
+                    {
+                        primary = i == 0 ? 1 : 0,
+                        song_uri = item.uri,
+                        artist_uri = item.artists[i].uri
+                    }) + ",";
+
+                    batchCountSongToArtist++;
+                    if (batchCountSongToArtist == 100)
+                    {
+                        logger.LogInformation("Batch count reached, Updating SongToArtist table");
+
+                        json_song_to_artist = json_song_to_artist.TrimEnd(',');
+                        json_song_to_artist = "{ \"values\":[" + json_song_to_artist + "]}";
+
+                        conn.Open();
+                        conn.Execute("[ETL].[LoadSongToArtist]", new { json = json_song_to_artist }, commandType: CommandType.StoredProcedure);
+                        conn.Close();
+                        json_song_to_artist = string.Empty;
+                        batchCountSongToArtist = 0;
+                        logger.LogInformation("SongToArtist table updated");
                     }
                 }
             }
@@ -519,6 +578,21 @@ namespace SpotifyLoader
                 logger.LogInformation("Song table updated");
             }
 
+            if (batchCountSongToArtist > 0)
+            {
+                logger.LogInformation("Batch count reached, Updating SongToArtist table");
+
+                json_song_to_artist = json_song_to_artist.TrimEnd(',');
+                json_song_to_artist = "{ \"values\":[" + json_song_to_artist + "]}";
+
+                conn.Open();
+                conn.Execute("[ETL].[LoadSongToArtist]", new { json = json_song_to_artist }, commandType: CommandType.StoredProcedure);
+                conn.Close();
+                json_song_to_artist = string.Empty;
+                batchCountSongToArtist = 0;
+                logger.LogInformation("SongToArtist table updated");
+            }
+
             logger.LogInformation("LoadSongData finished running");
         }
         private static void Main()
@@ -534,6 +608,7 @@ namespace SpotifyLoader
                 Config? _config = JsonConvert.DeserializeObject<Config>(File.ReadAllText("config.json")) ?? throw new Exception("Config loaded as null");
 
                 //LoadStreamingData(logger, _config);
+                //DownloadSongAlbumData(logger, _config);
                 LoadSongData(logger, _config);
             }
             catch (Exception ex)
