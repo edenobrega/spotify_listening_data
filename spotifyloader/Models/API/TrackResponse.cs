@@ -8,9 +8,10 @@ namespace SpotifyLoader.Models.API
 {
     internal class TrackResponse
     {
-        public string id { get; set; }
+        public string uri { get; set; }
+        public int duration_ms { get; set; }
         public InnerTrackResponseAlbum album { get; set; }
-        public List<InnerTrackResponseArtist> artists { get; set; }
+        public InnerTrackResponseArtist[] artists { get; set; }
     }
 
     internal class InnerTrackResponseAlbum
@@ -20,6 +21,7 @@ namespace SpotifyLoader.Models.API
         public string name { get; set; }
         public string release_date { get; set; }
         public string album_type { get; set; }
+        public InnerTrackResponseArtist[] artists { get; set; }
     }
 
     internal class InnerTrackResponseArtist

@@ -17,7 +17,11 @@ namespace SpotifyLoader.Models.Config
 		public string ClientSecret { get; set; }
 		[JsonProperty("file_directory")] 
 		public string Directory { get; set; }
-		[JsonProperty("bulk_insert_size")] 
+        [JsonProperty("song_album_data_directory")]
+        public string SongAlbumDirectory { get; set; }
+        [JsonProperty("song_album_data_file_name")]
+        public string SongAlbumFileName { get; set; }
+        [JsonProperty("bulk_insert_size")] 
 		public int BulkSize { get; set; }
 	}
 }
