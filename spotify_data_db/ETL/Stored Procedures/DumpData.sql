@@ -1,14 +1,15 @@
-﻿CREATE     PROCEDURE [dbo].[DumpData]
+﻿CREATE      PROCEDURE [ETL].[DumpData]
 AS
 BEGIN
     DELETE FROM dbo.AlbumToArtist
+    DELETE FROM dbo.SongToArtist
+    DELETE FROM dbo.[Data]
+    DELETE FROM dbo.Song
     DELETE FROM dbo.Album
     DELETE FROM dbo.Artist
     DELETE FROM dbo.AudioFeature
-    DELETE FROM dbo.[Data]
     DELETE FROM dbo.Platform
     DELETE FROM dbo.Reason
-    DELETE FROM dbo.Song
     DELETE FROM dbo.[User]
 
     DBCC CHECKIDENT ('[Data]', RESEED, 0)

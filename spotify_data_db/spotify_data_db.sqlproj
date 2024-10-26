@@ -71,7 +71,6 @@
     <Build Include="dbo\Stored Procedures\GetMostAverageSongs.sql" />
     <Build Include="dbo\Stored Procedures\GetMonthlyListenData.sql" />
     <Build Include="dbo\Stored Procedures\GetArtistsPercentOfTotalListened.sql" />
-    <Build Include="dbo\Stored Procedures\DumpData.sql" />
     <Build Include="dbo\Tables\Album.sql" />
     <Build Include="dbo\Tables\Artist.sql" />
     <Build Include="dbo\Tables\User.sql" />
@@ -85,6 +84,9 @@
     <Build Include="ETL\Stored Procedures\LoadSongToAlbum.sql" />
     <Build Include="ETL\Stored Procedures\LoadAlbumToArtist.sql" />
     <Build Include="Security\ETL.sql" />
+    <Build Include="dbo\Tables\SongToArtist.sql" />
+    <Build Include="ETL\Stored Procedures\LoadSongToArtist.sql" />
+    <Build Include="ETL\Stored Procedures\DumpData.sql" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="spotify_data_db.refactorlog" />

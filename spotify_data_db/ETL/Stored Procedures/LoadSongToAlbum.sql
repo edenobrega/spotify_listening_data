@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE ETL.LoadSongToAlbum
+﻿CREATE   PROCEDURE [ETL].[LoadSongToAlbum]
     @json NVARCHAR(MAX)
 AS
 BEGIN
@@ -7,7 +7,8 @@ BEGIN
 
     SELECT 
         JSON_VALUE(j.value, '$.song_uri') AS [song_uri], 
-        JSON_VALUE(j.value, '$.album_uri') AS [album_uri]
+        JSON_VALUE(j.value, '$.album_uri') AS [album_uri],
+        JSON_VALUE(j.value, '$.duration_ms') AS [duration_ms]
     INTO #tmp
     FROM openjson(@json, '$.values') AS j
 
@@ -24,7 +25,7 @@ BEGIN
     WHERE a.ID IS NULL
 
     UPDATE s
-    SET AlbumID = a.ID
+    SET AlbumID = a.ID, s.Duration_ms = t.duration_ms
     FROM dbo.Song AS s
     JOIN #tmp AS t ON t.song_uri = s.Track_Uri
     JOIN dbo.Album AS a ON a.URI = t.album_uri

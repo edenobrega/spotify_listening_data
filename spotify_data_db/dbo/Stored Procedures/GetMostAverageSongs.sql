@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE dbo.GetMostAverageSongs
+﻿CREATE   PROCEDURE [dbo].[GetMostAverageSongs]
     @ListenCountThreshold int = 1
 AS
 BEGIN
@@ -33,10 +33,11 @@ BEGIN
     group by d.SongID
     having count(1) > @ListenCountThreshold
 
-    select TOP(10) s.ID AS [SongID] ,a.Name as [AritstName], s.Name as [SongName], af.Duration
+    select TOP(10) s.ID AS [SongID] ,a.Name as [AritstName], s.Name as [SongName], s.Duration_ms
     from dbo.AudioFeature as af
     join dbo.Song as s on s.ID = af.SongID
-    join dbo.Artist as a on a.ID = s.ArtistID
+    JOIN dbo.SongToArtist AS sta ON sta.SongID = s.ID AND sta.[Primary] = 1
+    join dbo.Artist as a on a.ID = sta.ArtistID
     where af.SongID in (select * from @FullyListenedSongs)
     order by ABS(Acousticness - @A)
     ,ABS(Danceability - @B)

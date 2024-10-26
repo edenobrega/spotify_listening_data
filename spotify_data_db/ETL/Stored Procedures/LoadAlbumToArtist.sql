@@ -6,6 +6,7 @@ BEGIN
     DROP TABLE IF EXISTS #missing
 
     SELECT 
+        JSON_VALUE(j.value, '$.primary') AS [primary], 
         JSON_VALUE(j.value, '$.album_uri') AS [album_uri], 
         JSON_VALUE(j.value, '$.artist_uri') AS [artist_uri]
     INTO #tmp
@@ -30,18 +31,18 @@ BEGIN
     LEFT JOIN dbo.Artist AS a ON a.URI = m.artist_uri
     WHERE a.ID IS NULL
 
-    INSERT INTO dbo.AlbumToArtist(AlbumID, ArtistID)
-    SELECT o.AlbumID, o.ArtistID
+    INSERT INTO dbo.AlbumToArtist([Primary], AlbumID, ArtistID)
+    SELECT o.[primary], o.AlbumID, o.ArtistID
     FROM
     (
-        SELECT album.ID AS AlbumID, artist.ID AS ArtistID
+        SELECT t.[primary], album.ID AS AlbumID, artist.ID AS ArtistID
         FROM #tmp AS t
         JOIN dbo.Album AS album ON album.URI = t.album_uri
         JOIN dbo.Artist AS artist ON artist.URI = t.artist_uri
 
         EXCEPT
 
-        SELECT AlbumID, ArtistID
+        SELECT [Primary], AlbumID, ArtistID
         FROM dbo.AlbumToArtist        
     ) AS o
 

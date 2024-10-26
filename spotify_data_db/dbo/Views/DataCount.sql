@@ -25,6 +25,11 @@ FROM dbo.AlbumToArtist
 
 UNION ALL
 
+SELECT 'SongToArtist' AS [Table], COUNT(1) AS [Count]
+FROM dbo.SongToArtist
+
+UNION ALL
+
 SELECT 'Platform' AS [Table], COUNT(1) AS [Count]
 FROM dbo.Platform
 

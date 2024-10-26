@@ -1,6 +1,5 @@
 ﻿CREATE TABLE [dbo].[AudioFeature] (
     [SongID]           INT        NOT NULL,
-    [Duration]         INT        NULL,
     [Acousticness]     FLOAT (53) NOT NULL,
     [Danceability]     FLOAT (53) NOT NULL,
     [Energy]           FLOAT (53) NOT NULL,
@@ -14,4 +13,6 @@
     [TimeSignature]    INT        NOT NULL,
     [Valence]          FLOAT (53) NOT NULL
 );
+
+
 
