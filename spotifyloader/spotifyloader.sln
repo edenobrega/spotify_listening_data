@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpotifyLoader", "SpotifyLoa
 EndProject
 Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "spotify_data_db", "..\spotify_data_db\spotify_data_db.sqlproj", "{81697A1D-C9C3-4E48-A60E-A426F89BD6B0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebAPI", "..\WebAPI\WebAPI.csproj", "{3AD019E1-7C08-4601-97B2-4C18A8B18515}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,6 +25,10 @@ Global
 		{81697A1D-C9C3-4E48-A60E-A426F89BD6B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{81697A1D-C9C3-4E48-A60E-A426F89BD6B0}.Release|Any CPU.Build.0 = Release|Any CPU
 		{81697A1D-C9C3-4E48-A60E-A426F89BD6B0}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{3AD019E1-7C08-4601-97B2-4C18A8B18515}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3AD019E1-7C08-4601-97B2-4C18A8B18515}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3AD019E1-7C08-4601-97B2-4C18A8B18515}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3AD019E1-7C08-4601-97B2-4C18A8B18515}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

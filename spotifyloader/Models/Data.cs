@@ -11,6 +11,7 @@ namespace SpotifyLoader.Models
     {
         [AutoIncrementColumn]
         public int ID { get; set; }
+        public int FileID { get; set; }
         public DateTime EndTime { get; set; }
         public float ms_played { get; set; }
         public int ReasonStart { get; set; }

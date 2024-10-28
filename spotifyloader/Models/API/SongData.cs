@@ -8,6 +8,7 @@ namespace SpotifyLoader.Models.API
 {
     public class SongData
     {
+        public int FileID { get; set; }
         public DateTime ts { get; set; }
         public string username { get; set; }
         public float ms_played { get; set; }

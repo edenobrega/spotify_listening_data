@@ -9,9 +9,12 @@ namespace SpotifyLoader.Models.API
 {
     internal class FeatureResponse
     {
+        public List<FeatureItem> audio_features { get; set; }
+    }
+    internal class FeatureItem
+    {
+        [ColumnName("SongID")]
         public string ID { get; set; }
-        [JsonProperty("duration_ms")]
-        public int Duration { get; set; }
         public float Acousticness { get; set; }
         public float Danceability { get; set; }
         public float Energy { get; set; }
