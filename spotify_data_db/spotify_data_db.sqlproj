@@ -63,6 +63,7 @@
     <Folder Include="ETL\" />
     <Folder Include="ETL\Stored Procedures\" />
     <Folder Include="Security\" />
+    <Folder Include="ETL\Tables\" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\AudioFeature.sql" />
@@ -87,6 +88,8 @@
     <Build Include="dbo\Tables\SongToArtist.sql" />
     <Build Include="ETL\Stored Procedures\LoadSongToArtist.sql" />
     <Build Include="ETL\Stored Procedures\DumpData.sql" />
+    <Build Include="ETL\Tables\Files.sql" />
+    <Build Include="ETL\Stored Procedures\AddFile.sql" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="spotify_data_db.refactorlog" />

@@ -11,10 +11,15 @@ namespace SpotifyLoader.Models.API
     {
         public List<FeatureItem> audio_features { get; set; }
     }
+    [BulkTableName("AudioFeature")]
     internal class FeatureItem
     {
-        [ColumnName("SongID")]
-        public string ID { get; set; }
+        [ExcludeFromBulk]
+        public string URI { get; set; }
+        [ExcludeFromBulk]
+        public string ID { get; set; } = string.Empty;
+
+        public int SongID { get; set; }
         public float Acousticness { get; set; }
         public float Danceability { get; set; }
         public float Energy { get; set; }

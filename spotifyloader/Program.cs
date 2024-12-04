@@ -74,8 +74,9 @@ namespace SpotifyLoader
 
                 //LoadStreamingData(logger, _config);
                 //DownloadSongAlbumData(logger, _config);
-                LoadSongData(logger, _config);
-                //DownloadAudioFeaturesData(logger, _config);
+                //LoadSongData(logger, _config);
+                DownloadAudioFeaturesData(logger, _config);
+                LoadAudioFeatureData(logger, _config);
             }
             catch (Exception ex)
             {

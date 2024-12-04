@@ -14,13 +14,17 @@ namespace SpotifyLoader
     {
         private static void DownloadAudioFeaturesData(Microsoft.Extensions.Logging.ILogger logger, Config config)
         {
+            logger.LogInformation("Starting DownloadAudioFeaturesData");
+
             string[] songs;
             using (SqlConnection conn = new SqlConnection(config.ConnectionString))
             {
+                //string sql = "SELECT [Track_Uri] FROM [dbo].[Song]";
                 string sql = @"SELECT [Track_Uri]
-									FROM [dbo].[Song]
-									where id not in (SELECT [SongID]
-									FROM [dbo].[AudioFeature]) and Track_Uri is not null";
+                                FROM [dbo].[Song] AS s 
+                                LEFT JOIN [dbo].[AudioFeature] AS af ON af.SongID = s.ID
+                                WHERE af.SongID IS NULL
+                                ";
                 songs = conn.Query<string>(sql).ToArray();
             }
 
@@ -31,10 +35,11 @@ namespace SpotifyLoader
             for (int i = 0; i < loopCount; i++)
             {
                 Thread.Sleep(TimeSpan.FromSeconds(0.5));
+                Console.WriteLine("https://api.spotify.com/v1/audio-features?ids=" + string.Join(",", songs.Skip(i * 100).Take(100).Select(s => s.Replace("spotify:track:", ""))).TrimEnd(','));
                 responses.AddRange(GetApiData<FeatureResponse>("https://api.spotify.com/v1/audio-features?ids=" + string.Join(",", songs.Skip(i * 100).Take(100).Select(s => s.Replace("spotify:track:", ""))).TrimEnd(','), GetApiKey(config)).audio_features);
             }
 
-            string filePath = config.SongAlbumDirectory + "\\SongAudioFeatures.json";
+            string filePath = config.SongAlbumDirectory + "\\SongAudioFeatures_MISSING.json";
 
             if (File.Exists(filePath))
             {
@@ -47,6 +52,8 @@ namespace SpotifyLoader
             {
                 File.Delete(config.SongAlbumDirectory + "\\" + "old_file_features.json");
             }
+
+            logger.LogInformation("Finished DownloadAudioFeaturesData");
         }
 
         private static void DownloadSongAlbumData(Microsoft.Extensions.Logging.ILogger logger, Config config)

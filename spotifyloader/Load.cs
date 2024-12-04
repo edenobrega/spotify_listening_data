@@ -4,13 +4,8 @@ using Newtonsoft.Json;
 using SpotifyLoader.Models.API;
 using SpotifyLoader.Models.Config;
 using SpotifyLoader.Models;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Data;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Dapper;
 
 namespace SpotifyLoader
@@ -226,7 +221,55 @@ namespace SpotifyLoader
 
         private static void LoadAudioFeatureData(Microsoft.Extensions.Logging.ILogger logger, Config config)
         {
+            logger.LogInformation("Starting LoadAudioFeatureData");
+            InfluxSQL influx = new InfluxSQL(config.ConnectionString);
 
+            logger.LogInformation("Loading Audio Feature File");
+            string fileData = File.ReadAllText(config.SongAlbumDirectory + "\\" + "SongAudioFeatures.json");
+            var tmp = JsonConvert.DeserializeObject<FeatureItem[]>(fileData).Where(w => w is not null).ToArray();
+            if (tmp is null || tmp.Length == 0)
+            {
+                logger.LogInformation("No audio feature data found");
+                return;
+            }
+
+
+
+            var responses = tmp.ToDictionary(k => "spotify:track:"+k.ID, v => v);
+
+            Dictionary<string, int> newFeatures;
+            using (var conn = new SqlConnection(config.ConnectionString))
+            {
+                string sql = @"SELECT [ID], [Track_Uri]
+                                FROM [dbo].[Song] AS s 
+                                LEFT JOIN [dbo].[AudioFeature] AS af ON af.SongID = s.ID
+                                WHERE af.SongID IS NULL";
+                newFeatures = conn.Query(sql).ToDictionary(k => (string)k.Track_Uri, v => (int)v.ID);
+            }
+
+            List<FeatureItem> bulkAdd = new List<FeatureItem>();
+
+            foreach (var feature in newFeatures)
+            {
+                if (responses.TryGetValue(feature.Key, out FeatureItem value))
+                {
+                    value.SongID = feature.Value;
+                    bulkAdd.Add(value);
+                }
+
+                if(bulkAdd.Count == config.BulkSize)
+                {
+                    int inserted = influx.BulkInsert(bulkAdd);
+                    logger.LogInformation("{0} Audio features inserted", inserted);
+                    bulkAdd.Clear();
+                }
+            }
+
+            if (bulkAdd.Count > 0)
+            {
+                int inserted = influx.BulkInsert(bulkAdd);
+                logger.LogInformation("{0} Audio features inserted", inserted);
+            }
         }
 
         private static void LoadSongData(Microsoft.Extensions.Logging.ILogger logger, Config config)
